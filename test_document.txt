@@ -1,0 +1,39 @@
+Document Parser and RAG Pipeline Overview
+
+Introduction
+This document describes a comprehensive document parsing and Retrieval-Augmented Generation (RAG) pipeline designed for intelligent document analysis and question-answering systems.
+
+Key Components
+The pipeline consists of several integrated components:
+
+1. Document Processing
+The document processor handles multiple file formats including PDF, DOCX, and plain text files. It extracts text content and prepares it for further processing through intelligent chunking strategies.
+
+2. Text Chunking
+Text is divided into manageable chunks using sentence-based segmentation with configurable overlap to maintain context continuity. Each chunk is optimized for embedding generation and retrieval.
+
+3. Embedding Generation
+The system uses the all-MiniLM-L6-v2 sentence transformer model to generate high-quality vector embeddings. This model provides excellent performance for semantic similarity tasks while maintaining computational efficiency.
+
+4. Vector Storage
+LanceDB serves as the vector database, providing fast similarity search capabilities. The database stores both the text chunks and their corresponding embeddings with comprehensive metadata.
+
+5. Chat Interface
+A LangChain-powered conversational interface enables natural language interactions with the stored documents. The system provides contextual responses with proper source citations.
+
+Technical Architecture
+The application is built using modern Python libraries and frameworks:
+- Sentence Transformers for embeddings
+- LanceDB for vector storage
+- LangChain for chat functionality
+- Streamlit for the web interface
+
+Use Cases
+This pipeline is ideal for:
+- Research document analysis
+- Knowledge base querying
+- Educational content exploration
+- Technical documentation search
+
+Conclusion
+The document parser and RAG pipeline provides a robust foundation for building intelligent document analysis applications with natural language interfaces.
