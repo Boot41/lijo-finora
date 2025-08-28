@@ -3,10 +3,9 @@
 
 # Python cache
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+*$py.class
+*.so
 
 # Virtual environment
 venv/
@@ -25,19 +24,16 @@ Thumbs.db
 
 # Data directories
 data/
-*.lance/
+*.db
+*.sqlite
 
 # Logs
 *.log
+logs/
 
 # Temporary files
 *.tmp
 *.temp
 
-# Jupyter notebooks
-.ipynb_checkpoints/
-
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
+# Streamlit cache
+.streamlit/
