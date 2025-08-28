@@ -206,6 +206,11 @@ class VectorStore:
             Number of chunks
         """
         try:
+            # Check if table exists first
+            if self.table_name not in self.db.table_names():
+                logger.info(f"Table '{self.table_name}' does not exist, returning 0 chunks")
+                return 0
+                
             if self.table is None:
                 self.open_table()
             

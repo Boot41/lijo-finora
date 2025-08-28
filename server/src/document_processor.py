@@ -3,6 +3,7 @@
 from typing import List, Dict, Any, Union
 from pathlib import Path
 import logging
+import time
 import pypdf
 import docx
 from utils.config import MAX_TOKENS, MERGE_PEERS, MIN_CHUNK_SIZE
@@ -121,6 +122,7 @@ class DocumentProcessor:
             logger.info(f"Generated {len(text_chunks)} chunks")
             
             # Process chunks into the format we need
+            start_time = time.time()
             processed_chunks = []
             for i, chunk_text in enumerate(text_chunks):
                 # Filter out very small chunks
@@ -139,7 +141,15 @@ class DocumentProcessor:
                 processed_chunks.append(chunk_data)
             
             logger.info(f"Processed {len(processed_chunks)} valid chunks")
-            return processed_chunks
+            return {
+                'chunks': processed_chunks,
+                'full_text': text,  # Store full text for viewing
+                'metadata': {
+                    'source': source,
+                    'total_chunks': len(processed_chunks),
+                    'processing_time': time.time() - start_time
+                }
+            }
             
         except Exception as e:
             logger.error(f"Error processing document {source}: {str(e)}")
