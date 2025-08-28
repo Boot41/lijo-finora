@@ -112,6 +112,17 @@ export const apiService = {
     const response = await api.delete('/documents/database')
     return response.data
   },
+
+  // Expense analysis
+  analyzeExpenses: async (): Promise<{ transactions: any[] }> => {
+    const response = await api.get('/expenses/analyze')
+    return response.data
+  },
+
+  updateTransactionCategory: async (transactionId: string, category: string): Promise<void> => {
+    await api.put(`/expenses/transactions/${transactionId}/category`, { category })
+  },
 }
 
+export const { analyzeExpenses, updateTransactionCategory } = apiService
 export default apiService
