@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.document_processor import DocumentProcessor
 from src.embeddings import EmbeddingGenerator
-from src.chroma_vector_store import ChromaVectorStore
+from src.vector_store import VectorStore
 from models.document import Document, DocumentChunk, SearchResult
 from schemas.document import DocumentUploadResponse, SearchResponse, SearchResultItem
 
@@ -24,7 +24,7 @@ class DocumentUseCase:
     def __init__(self):
         self.doc_processor = DocumentProcessor()
         self.embedding_generator = EmbeddingGenerator()
-        self.vector_store = ChromaVectorStore()
+        self.vector_store = VectorStore()
     
     async def upload_file(self, file_content: bytes, filename: str) -> DocumentUploadResponse:
         """Process and store uploaded file."""

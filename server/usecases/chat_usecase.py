@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.chat_groq import GroqChatInterface
 from src.embeddings import EmbeddingGenerator
-from src.chroma_vector_store import ChromaVectorStore
+from src.vector_store import VectorStore
 from models.document import ChatMessage, SearchResult
 from schemas.document import ChatResponse, ChatSource
 from utils.config import GROQ_API_KEY
@@ -22,7 +22,7 @@ class ChatUseCase:
     
     def __init__(self):
         self.embedding_generator = EmbeddingGenerator()
-        self.vector_store = ChromaVectorStore()
+        self.vector_store = VectorStore()
         self.chat_interface = None
         
         # Initialize chat interface if API key is available

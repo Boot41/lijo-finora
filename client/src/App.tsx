@@ -1,14 +1,13 @@
 import React from 'react'
-import { Upload, Search, MessageCircle, FileText, PieChart } from 'lucide-react'
+import { Upload, Search, MessageCircle, FileText } from 'lucide-react'
 import { Toaster } from 'sonner'
 import DocumentUpload from './pages/DocumentUpload'
 import SearchInterface from './pages/SearchInterface'
 import ChatInterface from './pages/ChatInterface'
-import ExpenseCategories from './pages/ExpenseCategories'
 import StatusBar from './components/features/StatusBar'
 
 function App() {
-  const [activeTab, setActiveTab] = React.useState<'upload' | 'search' | 'chat' | 'expenses'>('upload')
+  const [activeTab, setActiveTab] = React.useState<'upload' | 'search' | 'chat'>('upload')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,17 +61,6 @@ function App() {
               <MessageCircle className="h-4 w-4" />
               <span>Chat</span>
             </button>
-            <button
-              onClick={() => setActiveTab('expenses')}
-              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'expenses'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <PieChart className="h-4 w-4" />
-              <span>Expense Categories</span>
-            </button>
           </div>
         </div>
       </nav>
@@ -82,7 +70,6 @@ function App() {
         {activeTab === 'upload' && <DocumentUpload />}
         {activeTab === 'search' && <SearchInterface />}
         {activeTab === 'chat' && <ChatInterface />}
-        {activeTab === 'expenses' && <ExpenseCategories />}
       </main>
       
       {/* Toast notifications */}
