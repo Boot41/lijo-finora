@@ -18,7 +18,7 @@ function App() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <FileText className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Document Parser & RAG Chat</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Finora</h1>
             </div>
             <StatusBar />
           </div>

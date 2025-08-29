@@ -9,12 +9,12 @@ from datetime import datetime
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.chat_gemini import GeminiChatInterface
+from src.chat_groq import GroqChatInterface
 from src.embeddings import EmbeddingGenerator
-from src.vector_store import VectorStore
+from src.chroma_vector_store import ChromaVectorStore
 from models.document import ChatMessage, SearchResult
 from schemas.document import ChatResponse, ChatSource
-from utils.config import GOOGLE_API_KEY
+from utils.config import GROQ_API_KEY
 
 
 class ChatUseCase:
@@ -22,12 +22,12 @@ class ChatUseCase:
     
     def __init__(self):
         self.embedding_generator = EmbeddingGenerator()
-        self.vector_store = VectorStore()
+        self.vector_store = ChromaVectorStore()
         self.chat_interface = None
         
         # Initialize chat interface if API key is available
-        if GOOGLE_API_KEY and GOOGLE_API_KEY != "your_google_api_key_here":
-            self.chat_interface = GeminiChatInterface(response_length="balanced")
+        if GROQ_API_KEY and GROQ_API_KEY != "your_groq_api_key_here":
+            self.chat_interface = GroqChatInterface(response_length="balanced")
     
     def is_chat_available(self) -> bool:
         """Check if chat functionality is available."""
@@ -40,7 +40,7 @@ class ChatUseCase:
     ) -> ChatResponse:
         """Generate chat response with document context."""
         if not self.chat_interface:
-            raise ValueError("Chat functionality requires Google Gemini API key")
+            raise ValueError("Chat functionality requires Groq API key")
         
         try:
             # Update response length
@@ -86,7 +86,7 @@ class ChatUseCase:
     ) -> Generator[Dict[str, Any], None, None]:
         """Generate streaming chat response."""
         if not self.chat_interface:
-            raise ValueError("Chat functionality requires Google Gemini API key")
+            raise ValueError("Chat functionality requires Groq API key")
         
         try:
             # Update response length

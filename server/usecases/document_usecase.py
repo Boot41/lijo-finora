@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.document_processor import DocumentProcessor
 from src.embeddings import EmbeddingGenerator
-from src.vector_store import VectorStore
+from src.chroma_vector_store import ChromaVectorStore
 from models.document import Document, DocumentChunk, SearchResult
 from schemas.document import DocumentUploadResponse, SearchResponse, SearchResultItem
 
@@ -24,7 +24,7 @@ class DocumentUseCase:
     def __init__(self):
         self.doc_processor = DocumentProcessor()
         self.embedding_generator = EmbeddingGenerator()
-        self.vector_store = VectorStore()
+        self.vector_store = ChromaVectorStore()
     
     async def upload_file(self, file_content: bytes, filename: str) -> DocumentUploadResponse:
         """Process and store uploaded file."""
@@ -214,7 +214,7 @@ class DocumentUseCase:
             chunk_count = self.vector_store.count_chunks()
             
             # Clear database
-            self.vector_store.delete_table()
+            self.vector_store.clear_collection()
             
             return {
                 "message": "Database cleared successfully",
@@ -223,3 +223,11 @@ class DocumentUseCase:
             
         except Exception as e:
             raise ValueError(f"Error clearing database: {str(e)}")
+    
+    async def get_all_chunks(self) -> List[Dict[str, Any]]:
+        """Get all document chunks from vector store for export."""
+        try:
+            return self.vector_store.get_all_chunks()
+        except Exception as e:
+            logger.error(f"Error getting all chunks: {str(e)}")
+            return []

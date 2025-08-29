@@ -28,7 +28,7 @@ async def chat_with_documents(
         if not chat_usecase.is_chat_available():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Chat functionality requires Google Gemini API key"
+                detail="Chat functionality requires Groq API key"
             )
         
         result = await chat_usecase.chat_with_documents(
@@ -63,7 +63,7 @@ async def chat_stream(
         if not chat_usecase.is_chat_available():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Chat functionality requires Google Gemini API key"
+                detail="Chat functionality requires Groq API key"
             )
         
         async def generate_response():

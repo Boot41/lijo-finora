@@ -4,9 +4,12 @@ from typing import List, Dict, Any, Union
 from pathlib import Path
 import logging
 import time
-import pypdf
-import docx
+from docx import Document as DocxDocument
+import re
 from utils.config import MAX_TOKENS, MERGE_PEERS, MIN_CHUNK_SIZE
+
+# Import Docling
+from docling.document_converter import DocumentConverter
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +21,8 @@ class DocumentProcessor:
     
     def __init__(self):
         """Initialize the document processor."""
-        pass
+        self.docling_converter = DocumentConverter()
+        logger.info("Docling converter initialized successfully")
         
     def _chunk_text(self, text: str, max_tokens: int = MAX_TOKENS, overlap: int = 50) -> List[str]:
         """Simple text chunking by sentences and token count."""
@@ -50,24 +54,11 @@ class DocumentProcessor:
         
         return chunks
     
-    def _extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text from PDF file."""
-        try:
-            with open(file_path, 'rb') as file:
-                pdf_reader = pypdf.PdfReader(file)
-                text = ""
-                for page_num, page in enumerate(pdf_reader.pages):
-                    page_text = page.extract_text()
-                    text += f"\n[Page {page_num + 1}]\n{page_text}"
-                return text
-        except Exception as e:
-            logger.error(f"Error extracting text from PDF: {e}")
-            raise
     
     def _extract_text_from_docx(self, file_path: str) -> str:
         """Extract text from DOCX file."""
         try:
-            doc = docx.Document(file_path)
+            doc = DocxDocument(file_path)
             text = ""
             for paragraph in doc.paragraphs:
                 text += paragraph.text + "\n"
@@ -85,7 +76,42 @@ class DocumentProcessor:
             logger.error(f"Error extracting text from TXT: {e}")
             raise
     
-    def process_document(self, source: Union[str, Path]) -> List[Dict[str, Any]]:
+    def extract_raw_docling_content(self, source: Union[str, Path]) -> str:
+        """
+        Extract raw content using Docling.
+        
+        Args:
+            source: File path to the document
+            
+        Returns:
+            Raw extracted markdown content
+        """
+        try:
+            logger.info(f"Extracting raw content with Docling: {source}")
+            source_path = Path(source)
+            
+            if not source_path.exists():
+                raise FileNotFoundError(f"Document not found: {source}")
+            
+            # Use Docling for PDFs
+            if source_path.suffix.lower() == '.pdf':
+                result = self.docling_converter.convert(str(source_path))
+                return result.document.export_to_markdown()
+            
+            # Fallback for other formats
+            file_ext = source_path.suffix.lower()
+            if file_ext == '.docx':
+                return self._extract_text_from_docx(str(source_path))
+            elif file_ext in ['.txt', '.md']:
+                return self._extract_text_from_txt(str(source_path))
+            else:
+                raise ValueError(f"Unsupported file format: {file_ext}")
+                
+        except Exception as e:
+            logger.error(f"Error extracting raw content: {e}")
+            raise
+
+    def process_document(self, source: Union[str, Path]) -> Dict[str, Any]:
         """
         Process a document from file path.
         
@@ -93,7 +119,7 @@ class DocumentProcessor:
             source: File path to the document
             
         Returns:
-            List of processed chunks with metadata
+            Dictionary with chunks and metadata
         """
         try:
             logger.info(f"Processing document: {source}")
@@ -102,17 +128,41 @@ class DocumentProcessor:
             if not source_path.exists():
                 raise FileNotFoundError(f"Document not found: {source}")
             
-            # Extract text based on file extension
-            file_ext = source_path.suffix.lower()
+            # Create md folder if it doesn't exist
+            md_folder = Path(__file__).parent.parent / "md"
+            md_folder.mkdir(exist_ok=True)
             
-            if file_ext == '.pdf':
-                text = self._extract_text_from_pdf(str(source_path))
-            elif file_ext == '.docx':
-                text = self._extract_text_from_docx(str(source_path))
-            elif file_ext in ['.txt', '.md']:
-                text = self._extract_text_from_txt(str(source_path))
+            # Extract content using Docling
+            logger.info(f"Processing document: {source_path}")
+            
+            if source_path.suffix.lower() == '.pdf':
+                logger.info("Extracting content with Docling...")
+                result = self.docling_converter.convert(str(source_path))
+                text = result.document.export_to_markdown()
+                
+                # Save raw Docling extraction to md folder
+                md_filename = f"{source_path.stem}_docling_raw.md"
+                md_filepath = md_folder / md_filename
+                
+                logger.info(f"Saving Docling extraction to: {md_filepath}")
+                
+                with open(md_filepath, 'w', encoding='utf-8') as f:
+                    f.write(f"# Raw Docling Extraction\n\n")
+                    f.write(f"**Source:** {source_path.name}\n")
+                    f.write(f"**Extracted:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                    f.write(text)
+                
+                logger.info(f"✅ Raw Docling extraction saved to: {md_filepath}")
+                
             else:
-                raise ValueError(f"Unsupported file format: {file_ext}")
+                # Handle other file formats
+                file_ext = source_path.suffix.lower()
+                if file_ext == '.docx':
+                    text = self._extract_text_from_docx(str(source_path))
+                elif file_ext in ['.txt', '.md']:
+                    text = self._extract_text_from_txt(str(source_path))
+                else:
+                    raise ValueError(f"Unsupported file format: {file_ext}")
             
             if not text.strip():
                 raise ValueError("No text extracted from document")
@@ -156,14 +206,14 @@ class DocumentProcessor:
             raise
     
     def _extract_page_numbers_from_text(self, text: str) -> List[int]:
-        """Extract page numbers from text markers."""
+        """Extract page numbers from markdown headers or content."""
         import re
         page_numbers = []
-        # Look for [Page X] markers
-        page_matches = re.findall(r'\[Page (\d+)\]', text)
+        # Look for page references in markdown
+        page_matches = re.findall(r'page[\s:]*?(\d+)', text, re.IGNORECASE)
         for match in page_matches:
             page_numbers.append(int(match))
-        return sorted(list(set(page_numbers))) if page_numbers else []
+        return sorted(list(set(page_numbers))) if page_numbers else [1]
     
     def process_multiple_documents(self, sources: List[Union[str, Path]]) -> List[Dict[str, Any]]:
         """

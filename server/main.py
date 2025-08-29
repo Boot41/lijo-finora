@@ -4,7 +4,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import document, chat, auth, status, expenses
+from routes import document, chat, auth, status, expenses, export
 from middleware.error_handler import setup_error_handlers
 
 # Set up logging
@@ -36,6 +36,7 @@ app.include_router(document.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
 app.include_router(expenses.router)
+app.include_router(export.router)
 
 @app.on_event("startup")
 async def startup_event():

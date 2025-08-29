@@ -8,7 +8,7 @@ from schemas.document import ServerStatus
 from usecases.document_usecase import DocumentUseCase
 from usecases.chat_usecase import ChatUseCase
 from middleware.auth import get_current_user_optional
-from utils.config import GOOGLE_API_KEY
+from utils.config import GROQ_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ async def get_server_status(
         db_status = await document_usecase.get_database_status()
         
         # Check API key configuration
-        api_key_configured = bool(GOOGLE_API_KEY and GOOGLE_API_KEY != "your_google_api_key_here")
+        api_key_configured = bool(GROQ_API_KEY and GROQ_API_KEY != "your_groq_api_key_here")
         
         return ServerStatus(
             status="running",

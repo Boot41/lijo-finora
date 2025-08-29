@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { PieChart, TrendingUp, DollarSign, Calendar, Edit3, Check, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { PieChart, DollarSign, Check, X, Edit3, Calendar } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import { useAppStore } from '../store'
 import { analyzeExpenses, updateTransactionCategory } from '../api'
 
@@ -18,6 +18,7 @@ interface CategorySummary {
   name: string
   total: number
   count: number
+  percentage: number
   color: string
   icon: string
 }
@@ -54,15 +55,16 @@ export default function ExpenseCategories() {
   const [loading, setLoading] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [filterCategory, setFilterCategory] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'confidence'>('date')
+  const [viewMode, setViewMode] = useState<'tiles' | 'transactions'>('tiles')
+  const [selectedCategoryForView, setSelectedCategoryForView] = useState<string>('')
+  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date')
   const { serverStatus } = useAppStore()
 
   useEffect(() => {
     if (serverStatus?.chunk_count && serverStatus.chunk_count > 0) {
       loadExpenseAnalysis()
     }
-  }, [serverStatus])
+  }, [serverStatus?.chunk_count]) // Only watch chunk_count, not entire serverStatus
 
   const loadExpenseAnalysis = async () => {
     setLoading(true)
@@ -81,23 +83,24 @@ export default function ExpenseCategories() {
 
   const calculateCategorySummary = (transactions: Transaction[]): CategorySummary[] => {
     const categoryMap = new Map<string, { total: number; count: number }>()
+    const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0)
     
     transactions.forEach(transaction => {
-      if (transaction.type === 'debit') {
-        const existing = categoryMap.get(transaction.category) || { total: 0, count: 0 }
-        categoryMap.set(transaction.category, {
-          total: existing.total + Math.abs(transaction.amount),
-          count: existing.count + 1
-        })
-      }
+      const category = transaction.category
+      const existing = categoryMap.get(category) || { total: 0, count: 0 }
+      categoryMap.set(category, {
+        total: existing.total + transaction.amount,
+        count: existing.count + 1
+      })
     })
 
     return Array.from(categoryMap.entries()).map(([name, data]) => ({
       name,
       total: data.total,
       count: data.count,
+      percentage: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
       color: CATEGORY_COLORS[name as keyof typeof CATEGORY_COLORS] || CATEGORY_COLORS.Miscellaneous,
-      icon: CATEGORY_ICONS[name as keyof typeof CATEGORY_ICONS] || CATEGORY_ICONS.Miscellaneous
+      icon: CATEGORY_ICONS[name as keyof typeof CATEGORY_ICONS] || '📋'
     })).sort((a, b) => b.total - a.total)
   }
 
@@ -116,30 +119,35 @@ export default function ExpenseCategories() {
     }
   }
 
+  const handleCategoryClick = (categoryName: string) => {
+    setSelectedCategoryForView(categoryName)
+    setViewMode('transactions')
+  }
+
+  const handleBackToTiles = () => {
+    setViewMode('tiles')
+    setSelectedCategoryForView('')
+  }
+
   const totalExpenses = categories.reduce((sum, cat) => sum + cat.total, 0)
   
-  const getFilteredTransactions = () => {
-    let filtered = transactions
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(t => t.category === filterCategory)
+  const filteredTransactions = transactions.filter(transaction => {
+    if (viewMode === 'transactions' && selectedCategoryForView) {
+      return transaction.category === selectedCategoryForView
     }
-    
-    return filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'amount':
-          return b.amount - a.amount
-        case 'confidence':
-          return b.confidence - a.confidence
-        case 'date':
-        default:
-          return new Date(b.date).getTime() - new Date(a.date).getTime()
-      }
-    })
-  }
-  
-  const filteredTransactions = getFilteredTransactions()
-  const unclassifiedTransactions = transactions.filter(t => t.category === 'Miscellaneous' || t.confidence < 0.7)
-  const classificationRate = transactions.length > 0 ? ((transactions.length - unclassifiedTransactions.length) / transactions.length * 100) : 0
+    return true
+  })
+
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    switch (sortBy) {
+      case 'date':
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      case 'amount':
+        return b.amount - a.amount
+      default:
+        return 0
+    }
+  })
 
   if (serverStatus?.chunk_count === 0) {
     return (
@@ -200,8 +208,8 @@ export default function ExpenseCategories() {
                 <Check className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Classified</p>
-                  <p className="text-2xl font-bold text-green-900">{transactions.length - unclassifiedTransactions.length}</p>
-                  <p className="text-xs text-gray-500">{classificationRate.toFixed(1)}% classified</p>
+                  <p className="text-2xl font-bold text-green-900">{transactions.length - filteredTransactions.filter(t => t.category === 'Miscellaneous').length}</p>
+                  <p className="text-xs text-gray-500">{((transactions.length - filteredTransactions.filter(t => t.category === 'Miscellaneous').length) / transactions.length * 100).toFixed(1)}% classified</p>
                 </div>
               </div>
             </div>
@@ -210,7 +218,7 @@ export default function ExpenseCategories() {
                 <X className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Need Review</p>
-                  <p className="text-2xl font-bold text-orange-900">{unclassifiedTransactions.length}</p>
+                  <p className="text-2xl font-bold text-orange-900">{filteredTransactions.filter(t => t.category === 'Miscellaneous').length}</p>
                   <p className="text-xs text-gray-500">Low confidence/Misc</p>
                 </div>
               </div>
@@ -219,69 +227,86 @@ export default function ExpenseCategories() {
 
           {/* Category Tiles */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Expense Categories</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories.map((category) => (
-                <div key={category.name} className={`p-4 rounded-lg border-2 ${category.color}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xl">{category.icon}</span>
-                      <h4 className="font-semibold">{category.name}</h4>
+            {!loading && categories.length > 0 && viewMode === 'tiles' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categories.map((category) => (
+                  <div
+                    key={category.name}
+                    onClick={() => handleCategoryClick(category.name)}
+                    className={`p-6 rounded-xl border-2 transition-all duration-200 hover:shadow-lg cursor-pointer transform hover:scale-105 ${
+                      CATEGORY_COLORS[category.name as keyof typeof CATEGORY_COLORS] || CATEGORY_COLORS.Miscellaneous
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-3xl">
+                          {CATEGORY_ICONS[category.name as keyof typeof CATEGORY_ICONS] || '📋'}
+                        </span>
+                        <h3 className="font-semibold text-xl">{category.name}</h3>
+                      </div>
+                      <span className="text-sm font-medium px-3 py-1 bg-white bg-opacity-50 rounded-full">
+                        {category.count} txns
+                      </span>
                     </div>
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold">₹{category.total.toLocaleString()}</p>
-                    <p className="text-sm opacity-75">{category.count} transactions</p>
-                    <div className="w-full bg-white bg-opacity-50 rounded-full h-2">
-                      <div 
-                        className="bg-current h-2 rounded-full opacity-60" 
-                        style={{ width: `${(category.total / totalExpenses) * 100}%` }}
-                      ></div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm opacity-75">Total Spent</span>
+                        <span className="font-bold text-2xl">₹{category.total.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm opacity-75">Percentage</span>
+                        <span className="font-medium text-lg">{category.percentage.toFixed(1)}%</span>
+                      </div>
+                      <div className="mt-4 text-center">
+                        <span className="text-xs opacity-60">Click to view transactions</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
+        </>
+      )}
 
-          {/* Transaction List */}
+      {/* Transaction List View */}
+        {!loading && viewMode === 'transactions' && (
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="p-6 border-b">
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Transaction List</h3>
-                  <p className="text-gray-600">All transactions with classification status</p>
-                </div>
                 <div className="flex items-center space-x-4">
-                  <select
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
-                    className="border rounded-lg px-3 py-2 text-sm"
+                  <button
+                    onClick={handleBackToTiles}
+                    className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
                   >
-                    <option value="all">All Categories</option>
-                    <option value="Miscellaneous">Need Review</option>
-                    {Object.keys(CATEGORY_COLORS).filter(cat => cat !== 'Miscellaneous').map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    <span>←</span>
+                    <span>Back to Categories</span>
+                  </button>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">
+                      {CATEGORY_ICONS[selectedCategoryForView as keyof typeof CATEGORY_ICONS] || '📋'}
+                    </span>
+                    <h2 className="text-2xl font-semibold">{selectedCategoryForView}</h2>
+                  </div>
+                </div>
+                <div className="flex gap-3">
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'confidence')}
-                    className="border rounded-lg px-3 py-2 text-sm"
+                    onChange={(e) => setSortBy(e.target.value as 'date' | 'amount')}
+                    className="px-3 py-2 border rounded-lg text-sm"
                   >
                     <option value="date">Sort by Date</option>
                     <option value="amount">Sort by Amount</option>
-                    <option value="confidence">Sort by Confidence</option>
                   </select>
                 </div>
               </div>
               <div className="text-sm text-gray-500">
-                Showing {filteredTransactions.length} of {transactions.length} transactions
+                {filteredTransactions.length} transactions in {selectedCategoryForView}
               </div>
             </div>
             <div className="divide-y max-h-96 overflow-y-auto">
-              {filteredTransactions.map((transaction) => (
+              {sortedTransactions.map((transaction) => (
                 <div key={transaction.id} className="p-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -348,8 +373,7 @@ export default function ExpenseCategories() {
               ))}
             </div>
           </div>
-        </>
-      )}
+        )}
     </div>
   )
 }
